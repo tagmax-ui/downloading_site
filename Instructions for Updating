@@ -1,0 +1,7 @@
+PS C:\Users\jessy\PycharmProjects\downloading_site> git add .
+PS C:\Users\jessy\PycharmProjects\downloading_site> git commit -m "Description"
+PS C:\Users\jessy\PycharmProjects\downloading_site> git push
+Go on Render's Dashboard and select Téléchargement de TAGmax
+Select "Deploy from latest deploy" (Which will be the description)
+
+
