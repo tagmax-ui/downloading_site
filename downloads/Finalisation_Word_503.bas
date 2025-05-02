@@ -1,4 +1,4 @@
-Attribute VB_Name = "Typo"
+Attribute VB_Name = "Finalisation_Word_503"
 Sub Lancer_le_traitement()
     Call Supprimer_Caracteres_Speciaux(Display_Message:=False)
     Call Traits(Display_Message:=False)
