@@ -1,5 +1,6 @@
 Attribute VB_Name = "Typo"
 Sub Lancer_le_traitement()
+    Call Supprimer_Caracteres_Speciaux(Display_Message:=False)
     Call Traits(Display_Message:=False)
     Call Petites_Majuscules(Display_Message:=False)
     Call Renvois(Display_Message:=False)
@@ -103,46 +104,34 @@ End Sub
 
 
 Sub Traits(Optional Display_Message As Boolean = True)
-    Dim doc As Document
-    Dim rng As Range
-    Dim findString As String
-    Dim replaceString As String
-    errorCount = 0
+    Dim doc As Document: Set doc = ActiveDocument
+    Dim rngStory As Range, rngSub As Range
+    Dim motifs As Variant, remplacements As Variant
+    Dim totalRepl As Long, thisRepl As Long, i As Long
     
-    Options.DefaultHighlightColorIndex = wdRed
     Application.ScreenUpdating = False
+    Options.DefaultHighlightColorIndex = wdTurquoise
     
-    Set doc = ActiveDocument
+    '--- caractère “trait d’union insécable” ----------------------
+    Dim NBH As String: NBH = ChrW(&H2011)
     
-    ' Définir la chaîne à rechercher et la chaîne de remplacement
-    findString = "-([A-ZÀ-ÖØ-Þ0-9])"
-    replaceString = ChrW(&H2011) & "\1" ' Utilisation du trait d'union insécable
+    '--- tableaux motifs / remplacements -------------------------
+    motifs = Array("-([A-ZÀ-ÖØ-Þ0-9])", "([A-Za-zÀ-ÖØ-Þ])\.-", "-([A-Za-zÀ-ÖØ-Þ])\.")
     
-    ' Parcourir toutes les instances dans le document
-    With doc.Content.Find
-        .ClearFormatting
-        .Replacement.ClearFormatting
-        .Text = findString
-        .Replacement.Text = replaceString
-        .Forward = True
-        .Wrap = wdFindContinue
-        .Format = False
-        .MatchWildcards = True
-        .Replacement.Highlight = True
-        .Execute Replace:=wdReplaceAll
-    End With
-
+    remplacements = Array(NBH & "\1", "\1." & NBH, NBH & "\1.")
+    
+    '--- on balaie chacune des StoryRanges du document -------------
+    For Each rngStory In doc.StoryRanges
+        For i = LBound(motifs) To UBound(motifs)
+            RemplacerDansPlage rngStory, CStr(motifs(i)), CStr(remplacements(i))
+        Next i
+    Next rngStory
+    
     Application.ScreenUpdating = True
     
-    ' Display message box with error count
     If Display_Message Then
-        If errorCount > 0 Then
-            MsgBox errorCount & " erreurs sont survenues pendant l'application des traits d'union insécables.", vbExclamation
-        Else
-            MsgBox "L'application des traits d'union insécables s'est déroulée sans erreur.", vbInformation
-        End If
+        MsgBox totalRepl & " remplacement(s) effectué(s).", vbInformation
     End If
-
 End Sub
 
 
@@ -415,5 +404,58 @@ Sub Process_Small_Caps_Range(rng As Range, mentionList As Variant, searchPattern
 ErrorHandler:
     errorCount = errorCount + 1
     Resume Next
+End Sub
+
+Sub Supprimer_Caracteres_Speciaux(Optional Display_Message As Boolean = True)
+    
+    Options.DefaultHighlightColorIndex = wdBlue
+    
+    '--- 1) Déclaration des points de code à supprimer ----------
+    Dim chars As Variant
+    chars = Array(&H2995, &H2996, &H22D8, &H22D9, &H272D, &H2729)
+
+
+    '--- 2) a) Nettoyage du contenu visible --------------------
+    Dim i As Long
+    For i = LBound(chars) To UBound(chars)
+        With ActiveDocument.Content.Find
+            .ClearFormatting
+            .Replacement.ClearFormatting
+            .Text = ChrW(chars(i))
+            .Replacement.Text = ""
+            .Wrap = wdFindContinue
+            .Execute Replace:=wdReplaceAll
+        End With
+    Next i
+
+    '--- 2) b) Nettoyage des hyperliens -----------------------
+    Dim hl As Hyperlink, charToRemove As String
+    For Each hl In ActiveDocument.Hyperlinks
+        For i = LBound(chars) To UBound(chars)
+            charToRemove = ChrW(chars(i))
+            hl.Address = Replace(hl.Address, charToRemove, "")
+            hl.TextToDisplay = Replace(hl.TextToDisplay, charToRemove, "")
+        Next i
+    Next hl
+
+    If Display_Message Then
+        MsgBox "Élimination des symboles TAGmax terminée"
+    End If
+End Sub
+
+Private Sub RemplacerDansPlage(rng As Range, _
+                               ByVal motif As String, _
+                               ByVal remplacement As String)
+    With rng.Find
+        .ClearFormatting
+        .Replacement.ClearFormatting
+        .Text = motif
+        .Replacement.Text = remplacement
+        .MatchWildcards = True
+        .Wrap = wdFindStop
+        .Forward = True
+        .Replacement.Highlight = True
+        .Execute Replace:=wdReplaceAll
+    End With
 End Sub
 
